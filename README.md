@@ -1,18 +1,18 @@
 # ditdev_be_rust
 
-Backend API untuk portofolio pribadi — ditulis ulang dari Node.js/Express ke **Rust**. Single binary, performa tinggi, dan type-safe.
+Backend API untuk portofolio pribadi - ditulis ulang dari Node.js/Express ke **Rust**. Single binary, performa tinggi, dan type-safe.
 
 ## Fitur
 
-- **Autentikasi** — JWT (login, register, verify, logout, daftar sesi aktif), bcrypt cost 12
-- **Projects & Certificates** — CRUD lengkap dengan upload file ke Cloudflare R2
-- **Stats** — statistik portofolio dengan auto-calc (months-diff, total projects)
-- **Upload** — image (5 MB) dan PDF (10 MB) ke Cloudflare R2
-- **Chat AI** — proxy ke Cerebras LLM dengan RAG context + rate limit per-IP
-- **Contact form** — diteruskan ke Discord webhook
-- **XP system** — XP harian deterministik (seeded PRNG) + bonus XP per visitor
-- **GitHub activity** — proxy ke GitHub API dengan cache server-side
-- **Health check** — liveness + status database & R2
+- **Autentikasi** - JWT (login, register, verify, logout, daftar sesi aktif), bcrypt cost 12
+- **Projects & Certificates** - CRUD lengkap dengan upload file ke Cloudflare R2
+- **Stats** - statistik portofolio dengan auto-calc (months-diff, total projects)
+- **Upload** - image (5 MB) dan PDF (10 MB) ke Cloudflare R2
+- **Chat AI** - proxy ke Cerebras LLM dengan RAG context + rate limit per-IP
+- **Contact form** - diteruskan ke Discord webhook
+- **XP system** - XP harian deterministik (seeded PRNG) + bonus XP per visitor
+- **GitHub activity** - proxy ke GitHub API dengan cache server-side
+- **Health check** - liveness + status database & R2
 
 ## Tech Stack
 
@@ -30,7 +30,7 @@ Backend API untuk portofolio pribadi — ditulis ulang dari Node.js/Express ke *
 ## Persyaratan
 
 - Rust **stable ≥ 1.85** (edition 2024)
-- PostgreSQL — bisa Neon (serverless) atau lokal
+- PostgreSQL - bisa Neon (serverless) atau lokal
 
 ## Setup
 
@@ -48,48 +48,48 @@ Server akan berjalan di `http://localhost:2817`. Migrasi database **dijalankan o
 
 | Variable | Wajib | Default | Keterangan |
 |---|---|---|---|
-| `PORT` | — | `2817` | Port server |
-| `APP_ENV` | — | `development` | `production` menyembunyikan detail error |
-| `LOG_LEVEL` | — | `info` | Level log |
-| `DATABASE_URL` | ✅ | — | Connection string PostgreSQL |
-| `DB_SSL_REJECT_UNAUTHORIZED` | — | `true` | Verifikasi TLS (nonaktifkan hanya untuk dev lokal) |
-| `JWT_SECRET` | ✅ | — | Secret untuk sign/verify token |
-| `JWT_EXPIRE` | — | `24h` | Masa berlaku token |
-| `R2_ACCOUNT_ID` | ✅ | — | Cloudflare R2 |
-| `R2_ACCESS_KEY_ID` | ✅ | — | Cloudflare R2 |
-| `R2_SECRET_ACCESS_KEY` | ✅ | — | Cloudflare R2 |
-| `R2_BUCKET_NAME` | ✅ | — | Nama bucket (`porto-ditdev`) |
-| `R2_PUBLIC_URL` | ✅ | — | URL publik file (mis. `https://cdn.example.com`) |
-| `CEREBRAS_API_KEY` | — | — | API key Cerebras (untuk chat AI) |
-| `CEREBRAS_MODEL` | — | `gpt-oss-120b` | Model yang dipakai chat |
-| `RAG_SERVICE_URL` | — | `http://localhost:8765` | Service RAG eksternal |
-| `DISCORD_WEBHOOK_URL` | — | — | Webhook Discord (untuk contact form) |
-| `GITHUB_USERNAME` | — | `rillToMe` | Username GitHub |
-| `GITHUB_TOKEN` | — | — | Token GitHub (opsional, naikkan rate limit ke 5000/jam) |
-| `CLIENT_URL` / `ADMIN_URL` | — | — | Whitelist CORS tambahan |
+| `PORT` | - | `2817` | Port server |
+| `APP_ENV` | - | `development` | `production` menyembunyikan detail error |
+| `LOG_LEVEL` | - | `info` | Level log |
+| `DATABASE_URL` | ✅ | - | Connection string PostgreSQL |
+| `DB_SSL_REJECT_UNAUTHORIZED` | - | `true` | Verifikasi TLS (nonaktifkan hanya untuk dev lokal) |
+| `JWT_SECRET` | ✅ | - | Secret untuk sign/verify token |
+| `JWT_EXPIRE` | - | `24h` | Masa berlaku token |
+| `R2_ACCOUNT_ID` | ✅ | - | Cloudflare R2 |
+| `R2_ACCESS_KEY_ID` | ✅ | - | Cloudflare R2 |
+| `R2_SECRET_ACCESS_KEY` | ✅ | - | Cloudflare R2 |
+| `R2_BUCKET_NAME` | ✅ | - | Nama bucket (`porto-ditdev`) |
+| `R2_PUBLIC_URL` | ✅ | - | URL publik file (mis. `https://cdn.example.com`) |
+| `CEREBRAS_API_KEY` | - | - | API key Cerebras (untuk chat AI) |
+| `CEREBRAS_MODEL` | - | `gpt-oss-120b` | Model yang dipakai chat |
+| `RAG_SERVICE_URL` | - | `http://localhost:8765` | Service RAG eksternal |
+| `DISCORD_WEBHOOK_URL` | - | - | Webhook Discord (untuk contact form) |
+| `GITHUB_USERNAME` | - | `rillToMe` | Username GitHub |
+| `GITHUB_TOKEN` | - | - | Token GitHub (opsional, naikkan rate limit ke 5000/jam) |
+| `CLIENT_URL` / `ADMIN_URL` | - | - | Whitelist CORS tambahan |
 
-> Jangan pernah commit `.env` — sudah di-`gitignore`. Gunakan `.env.example` sebagai acuan.
+> Jangan pernah commit `.env` - sudah di-`gitignore`. Gunakan `.env.example` sebagai acuan.
 
 ## API Endpoints
 
 Semua respons mengikuti format `{ "success": boolean, "message"?: string, "data"?: ... }`.
 
-### Auth — `/api/auth`
+### Auth - `/api/auth`
 | Method | Path | Auth | Keterangan |
 |---|---|---|---|
-| POST | `/api/auth/login` | — | Login, dapatkan token |
+| POST | `/api/auth/login` | - | Login, dapatkan token |
 | POST | `/api/auth/register` | JWT | Buat admin baru |
 | GET | `/api/auth/verify` | JWT | Verifikasi token |
 | POST | `/api/auth/logout` | JWT | Logout (token di-blacklist) |
 | GET | `/api/auth/sessions` | JWT | Daftar sesi aktif |
 
-### Content — `/api/projects`, `/api/certificates`
+### Content - `/api/projects`, `/api/certificates`
 CRUD standar: `GET /` (publik), `GET /{id}` (publik), `POST /`, `PUT /{id}`, `DELETE /{id}` (JWT).
 
-### Stats — `/api/stats`
+### Stats - `/api/stats`
 `GET /` dan `GET /{key}` publik; `POST /`, `PUT /{key}`, `DELETE /{key}` butuh JWT. Nilai `total_projects` dan statistik berbasis `start_date` dihitung otomatis.
 
-### Upload — `/api/upload`
+### Upload - `/api/upload`
 | Method | Path | Keterangan |
 |---|---|---|
 | POST | `/api/upload` | Upload image (≤ 5 MB, jpeg/jpg/png/gif/webp) ke R2 |
@@ -98,30 +98,30 @@ CRUD standar: `GET /` (publik), `GET /{id}` (publik), `POST /`, `PUT /{id}`, `DE
 
 Semua butuh JWT. Body multipart.
 
-### Chat AI — `/api/chat`
+### Chat AI - `/api/chat`
 | Method | Path | Keterangan |
 |---|---|---|
 | POST | `/api/chat` | Kirim pesan ke CHANGLI-AI (Cerebras + RAG context). Rate limit 50/jam per IP |
 
-### Contact — `/api/contact`
+### Contact - `/api/contact`
 | Method | Path | Keterangan |
 |---|---|---|
 | POST | `/api/contact` | Kirim pesan → Discord webhook |
 
-### GitHub — `/api/github`
+### GitHub - `/api/github`
 | Method | Path | Keterangan |
 |---|---|---|
 | GET | `/api/github/activity` | Data aktivitas GitHub (events, user, repos), cache 15 menit |
 | GET | `/api/github/heatmap` | Gambar contribution heatmap, `Cache-Control: max-age=3600` |
 
-### XP — `/api/xp`
+### XP - `/api/xp`
 | Method | Path | Keterangan |
 |---|---|---|
 | GET | `/api/xp` | Total XP (base + bonus) |
 | POST | `/api/xp/tick` | Tambah bonus XP (1–4), cooldown 2 detik per IP |
 
-### Health — `/api/health`
-`GET /`, `GET /detailed`, `GET /ping`, `GET /database` — semuanya publik.
+### Health - `/api/health`
+`GET /`, `GET /detailed`, `GET /ping`, `GET /database` - semuanya publik.
 
 ## Testing
 
