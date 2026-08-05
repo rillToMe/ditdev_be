@@ -1,0 +1,8 @@
+# Rust
+/target
+# Secrets — never commit real credentials
+.env
+# Logs
+logs/
+
+PRD.md
