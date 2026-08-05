@@ -68,8 +68,6 @@ Server akan berjalan di `http://localhost:2817`. Migrasi database **dijalankan o
 | `GITHUB_TOKEN` | - | - | Token GitHub (opsional, naikkan rate limit ke 5000/jam) |
 | `CLIENT_URL` / `ADMIN_URL` | - | - | Whitelist CORS tambahan |
 
-> Jangan pernah commit `.env` - sudah di-`gitignore`. Gunakan `.env.example` sebagai acuan.
-
 ## API Endpoints
 
 Semua respons mengikuti format `{ "success": boolean, "message"?: string, "data"?: ... }`.
