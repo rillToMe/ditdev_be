@@ -60,8 +60,10 @@ Server akan berjalan di `http://localhost:2817`. Migrasi database **dijalankan o
 | `R2_SECRET_ACCESS_KEY` | ✅ | - | Cloudflare R2 |
 | `R2_BUCKET_NAME` | ✅ | - | Nama bucket (`porto-ditdev`) |
 | `R2_PUBLIC_URL` | ✅ | - | URL publik file (mis. `https://cdn.example.com`) |
-| `CEREBRAS_API_KEY` | - | - | API key Cerebras (untuk chat AI) |
-| `CEREBRAS_MODEL` | - | `gpt-oss-120b` | Model yang dipakai chat |
+| `XKIRO_API_KEY` | - | - | API key Xkiro (dipakai chat AI) |
+| `XKIRO_MODEL` | - | `deepseek/deepseek-v4-flash` | Model Xkiro yang dipakai chat |
+| `CEREBRAS_API_KEY` | - | - | API key Cerebras (tidak dipakai lagi, cadangan) |
+| `CEREBRAS_MODEL` | - | `gpt-5.5` | Model Cerebras (tidak dipakai lagi, cadangan) |
 | `RAG_SERVICE_URL` | - | `http://localhost:8765` | Service RAG eksternal |
 | `DISCORD_WEBHOOK_URL` | - | - | Webhook Discord (untuk contact form) |
 | `GITHUB_USERNAME` | - | `rillToMe` | Username GitHub |

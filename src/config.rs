@@ -13,10 +13,18 @@ pub struct AppConfig {
     pub db_ssl_reject_unauthorized: bool,
     pub jwt_secret: String,
     pub jwt_expire: String,
+    /// Unused since chat moved to Xkiro; kept for the cerebras fallback service.
+    #[allow(dead_code)]
     pub cerebras_api_key: Option<String>,
+    #[allow(dead_code)]
     pub cerebras_model: String,
+    pub xkiro_api_key: Option<String>,
+    pub xkiro_model: String,
     pub discord_webhook_url: Option<String>,
     pub rag_service_url: String,
+    /// Sent as `X-RAG-Secret` on mutating RAG calls. Only needed when the RAG
+    /// service is not on localhost; it rejects unsigned writes once it has one.
+    pub rag_api_secret: Option<String>,
     pub github_username: String,
     pub github_token: Option<String>,
     pub r2: R2Config,
@@ -60,9 +68,12 @@ impl AppConfig {
             jwt_secret: required("JWT_SECRET")?,
             jwt_expire: env_or("JWT_EXPIRE", "24h"),
             cerebras_api_key: std::env::var("CEREBRAS_API_KEY").ok(),
-            cerebras_model: env_or("CEREBRAS_MODEL", "gpt-oss-120b"),
+            cerebras_model: env_or("CEREBRAS_MODEL", "gpt-5.5"),
+            xkiro_api_key: std::env::var("XKIRO_API_KEY").ok(),
+            xkiro_model: env_or("XKIRO_MODEL", "deepseek/deepseek-v4-flash"),
             discord_webhook_url: std::env::var("DISCORD_WEBHOOK_URL").ok(),
             rag_service_url: env_or("RAG_SERVICE_URL", "http://localhost:8765"),
+            rag_api_secret: std::env::var("RAG_API_SECRET").ok().filter(|s| !s.is_empty()),
             github_username: env_or("GITHUB_USERNAME", "rillToMe"),
             github_token: std::env::var("GITHUB_TOKEN").ok(),
             r2,

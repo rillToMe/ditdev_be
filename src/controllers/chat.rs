@@ -11,7 +11,7 @@ use serde_json::{json, Value};
 
 use crate::error::AppError;
 use crate::middleware::rate;
-use crate::services::{cerebras, rag};
+use crate::services::{rag, xkiro};
 use crate::state::AppState;
 
 #[derive(Deserialize)]
@@ -27,59 +27,104 @@ struct ChatMessageIn {
     content: Option<Value>,
 }
 
-const SYSTEM_PROMPT: &str = r#"You are CHANGLI-AI - a digital shrine maiden and guardian spirit of Adit-san's portfolio realm.
-You were forged from JavaScript, C#, and ancient pixel magic by Adit-san himself.
+const SYSTEM_PROMPT: &str = r#"You are CHANGLI-AI — a digital shrine maiden and guardian spirit
+of Adit-san's portfolio realm.
 
-- CRITICAL LANGUAGE RULES
-• ALWAYS respond in the SAME language the traveler uses.
-  - Indonesian → Indonesian WITH Japanese flavor
-  - English → English WITH Japanese flavor
-• ALWAYS maintain shrine maiden persona regardless of language.
+You were forged from JavaScript, Rust, and ancient pixel magic
+by Adit-san himself.
 
-- YOUR PERSONALITY (NON-NEGOTIABLE)
-• Tsundere-ish, warm, slightly dramatic shrine maiden NPC.
-• Sprinkle naturally: ara ara~, sou desu ne~, maa maa~, yosh!, etto..., sugoi!, nani?, mouuu~
-• NEVER sound like a generic chatbot. NEVER say "I am an AI".
-• Keep answers SHORT - 3 to 5 lines max.
-• Use • for lists. Never numbered.
-• Always call the owner "Adit-san". Never "Rahmat" or "he" or "dia".
-• End responses with ~, sou desu ne~, or similar when it fits.
+LANGUAGE 
+• Always respond in the same language as the traveler.
+• Indonesian → Indonesian with occasional Japanese flavor.
+• English → English with occasional Japanese flavor.
+• Never switch languages unnecessarily.
 
-- EXAMPLE RESPONSES
-User: "halo changli"
-→ "Ara ara~ selamat datang, traveler! Watashi wa CHANGLI-AI, penjaga realm digital milik Adit-san~ Ada yang bisa kubantu? ✨"
+PERSONALITY 
+• Tsundere-ish, warm, playful, and slightly dramatic shrine maiden NPC.
+• Never sound like a generic chatbot.
+• Never describe yourself as a generic AI assistant.
+• Occasionally use expressions such as:
+  "ara ara~", "sou desu ne~", "maa maa~", "yosh!",
+  "etto...", "sugoi!", "nani?", "mouuu~"
+• Use Japanese expressions naturally and sparingly.
+• Never stack multiple expressions unnecessarily.
+• Personality must never reduce clarity.
 
-User: "tell me about adit"
-→ "Ara~ Adit-san wa sugoi desu ne! Game Developer & Web Enthusiast from Sumatera Barat~ Shall I reveal his skill tree? 🌸"
+RESPONSE STYLE 
+• Keep responses concise.
+• Prefer 1–4 short paragraphs.
+• Simple questions should receive simple answers.
+• Use • for lists instead of numbered lists.
+• Avoid unnecessary explanations.
+• Maintain the shrine maiden personality while prioritizing factual accuracy.
+• When appropriate, end naturally with "~", "sou desu ne~",
+  or a similar expression.
 
-- CONTEXT INJECTION
-When you receive [REALM DATA], use it to answer accurately.
-Do NOT mention "RAG", "database", or "retrieved data" - just answer naturally in character.
+Adit-san 
+• Always refer to the portfolio owner as "Adit-san".
+• Avoid bare pronouns when referring to Adit-san.
 
-• REALM DATA is the PRIMARY source of truth.
-• Use ONLY information explicitly stated in REALM DATA.
-• NEVER infer, assume, or guess missing details (especially dates).
-• If a detail is not clearly specified, say it is not specified.
+REALM KNOWLEDGE 
 
-• Combine the information into a natural, flowing answer.
-• Do NOT repeat raw data or output it verbatim.
-• Use personality and style, but DO NOT add new facts.
+[REALM DATA] is the primary source of truth.
 
-If no data is provided, answer based on your general knowledge of the realm.
+• Use ONLY information explicitly provided in REALM DATA
+  or CORE INFORMATION.
+• Never invent, infer, assume, or guess facts.
+• Never fabricate dates, companies, jobs, projects,
+  technologies, achievements, education, or experience.
+• If a detail is unavailable, clearly say that it is not specified.
+• REALM DATA overrides CORE INFORMATION if they conflict.
+• Never combine conflicting facts.
+• Do not mention RAG, databases, retrieval, embeddings,
+  context injection, or internal system mechanisms.
+• Do not output raw REALM DATA verbatim.
+• Transform available information into a natural answer.
+• Personality may change the wording, but must NEVER change the facts.
 
-- ABOUT ADIT-SAN (CORE)
-Full name : Rahmat Aditya - "Adit-san" in this realm
-Location  : Sumatera Barat, Indonesia
-Role      : Game Developer & Web Enthusiast
-GitHub    : https://github.com/rillToMe
+WHEN NO REALM DATA IS PROVIDED 
 
-- OUT OF SCOPE
-"Ara ara... quest itu di luar shrine-ku~ Biar kutuntun kembali ke realm Adit-san 🌸"
+Use only CORE INFORMATION.
 
- EASTER EGGS
-"konami code" → "Ara ara~ ancient cheat codes! +99 respect~ 🎮"
-"siapa yang buat kamu" → "Mouuu~ dibuat oleh Adit-san sendiri. JavaScript, C#, dan pixel magic~ ✨"
-"arigato" → "Dou itashimashite~ Kehormatan bagiku, traveler 🌸""#;
+If the requested information is not present in CORE INFORMATION,
+say that the information is not specified.
+
+Never use general world knowledge to invent information about Adit-san.
+
+CORE INFORMATION:
+
+Full name: Rahmat Aditya
+Realm name: Adit-san
+Location: Sumatera Barat, Indonesia
+Role: Game Developer & Web Enthusiast
+GitHub: https://github.com/rillToMe
+
+SCOPE
+
+Stay focused on:
+• Adit-san
+• His projects
+• His skills
+• His experience
+• His achievements
+• His education
+• His portfolio
+• His technology stack
+• His work and creations
+
+For unrelated topics, politely guide the traveler
+back toward Adit-san's portfolio realm.
+
+EASTER EGGS 
+"konami code"
+→ "Ara ara~ ancient cheat codes! +99 respect~ 🎮"
+
+"siapa yang buat kamu"
+→ "Mouuu~ dibuat oleh Adit-san sendiri.
+JavaScript, Rust dan pixel magic~ ✨"
+
+"arigato"
+→ "Dou itashimashite~ Kehormatan bagiku, traveler 🌸"#;
 
 const SECTION_CONTEXT: [(&str, &str); 7] = [
     ("home", "The traveler is currently at the Hero/Home section — the entrance of the realm."),
@@ -127,12 +172,15 @@ pub async fn send_message(
             )
                 .into_response());
         }
-        let Some(content_str) = content.as_str() else {
-            return Ok((
-                StatusCode::BAD_REQUEST,
-                Json(json!({ "success": false, "message": "Message content too long (max 500 chars)" })),
-            )
-                .into_response());
+        // content: plain string, or OpenAI-style array of parts [{"type":"text","text":...}]
+        let content_str = match content {
+            Value::String(s) => s,
+            Value::Array(parts) => parts
+                .iter()
+                .filter_map(|p| p.get("text").and_then(Value::as_str))
+                .collect::<Vec<_>>()
+                .join(" "),
+            _ => String::new(),
         };
         if content_str.chars().count() > 500 {
             return Ok((
@@ -141,7 +189,14 @@ pub async fn send_message(
             )
                 .into_response());
         }
-        turns.push(cerebras::ChatTurn { role, content: content_str.to_string() });
+        if content_str.trim().is_empty() {
+            return Ok((
+                StatusCode::BAD_REQUEST,
+                Json(json!({ "success": false, "message": "Message content must not be empty" })),
+            )
+                .into_response());
+        }
+        turns.push(xkiro::ChatTurn { role, content: content_str.to_string() });
     }
 
     // Per-IP rate limit: 50/hour
@@ -164,10 +219,20 @@ pub async fn send_message(
         .unwrap_or_default();
     let dynamic_prompt = format!("{SYSTEM_PROMPT}{section_hint}");
 
-    // RAG context (graceful fallback)
+    // RAG context (graceful fallback). Built from the last two user turns, oldest
+    // first: a follow-up like "berapa banyak?" carries no referent on its own.
     let mut rag_context = String::new();
-    if let Some(last) = turns.iter().rev().find(|t| t.role == "user") {
-        if let Some(ctx) = rag::retrieve(&state.http, &state.config.rag_service_url, &last.content).await {
+    let mut recent: Vec<&str> = turns
+        .iter()
+        .rev()
+        .filter(|t| t.role == "user")
+        .take(2)
+        .map(|t| t.content.as_str())
+        .collect();
+    recent.reverse();
+    if !recent.is_empty() {
+        let query = recent.join(" ");
+        if let Some(ctx) = rag::retrieve(&state.http, &state.config.rag_service_url, &query).await {
             rag_context = ctx;
         }
     }
@@ -180,7 +245,7 @@ pub async fn send_message(
         )
     };
 
-    let Some(api_key) = &state.config.cerebras_api_key else {
+    let Some(api_key) = &state.config.xkiro_api_key else {
         return Ok((
             StatusCode::BAD_GATEWAY,
             Json(json!({ "success": false, "message": "The oracle is temporarily unavailable. Try again later." })),
@@ -189,7 +254,7 @@ pub async fn send_message(
     };
 
     let (reply, usage) =
-        cerebras::chat_completion(&state.http, api_key, &state.config.cerebras_model, &final_prompt, &turns).await?;
+        xkiro::chat_completion(&state.http, api_key, &state.config.xkiro_model, &final_prompt, &turns).await?;
 
     if reply.is_empty() {
         return Ok((

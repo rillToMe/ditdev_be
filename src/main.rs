@@ -95,7 +95,7 @@ fn cors_layer(config: &AppConfig) -> CorsLayer {
     let mut origins: Vec<&str> = vec![
         "http://localhost:5173",
         "http://localhost:5000",
-        "ditdev.kyuzenstudio.com", // parity: bare domain in the Node whitelist
+        "ditdev.kyuzenstudio.com",
         "http://ditdev.kyuzenstudio.com",
     ];
     if let Some(u) = &config.client_url {
