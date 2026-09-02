@@ -56,6 +56,7 @@ async fn main() -> anyhow::Result<()> {
         .nest("/chat", routes::chat::router())
         .nest("/contact", routes::contact::router())
         .nest("/github", routes::github::router())
+        .nest("/rag", routes::rag::router())
         .nest("/xp", routes::xp::router())
         .layer(from_fn_with_state(state.clone(), middleware::rate::api_limit));
 

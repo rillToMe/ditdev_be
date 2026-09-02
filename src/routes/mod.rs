@@ -5,6 +5,7 @@ pub mod contact;
 pub mod github;
 pub mod health;
 pub mod project;
+pub mod rag;
 pub mod stats;
 pub mod upload;
 pub mod xp;

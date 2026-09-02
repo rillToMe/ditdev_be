@@ -104,6 +104,56 @@ pub async fn retrieve(client: &reqwest::Client, rag_url: &str, query: &str) -> O
     }
 }
 
+/// `GET /health` on the RAG service. Errors are returned rather than swallowed:
+/// the admin panel shows them, unlike the fire-and-forget indexing hooks.
+pub async fn health(client: &reqwest::Client, rag_url: &str) -> Result<Value, String> {
+    let resp = client
+        .get(format!("{rag_url}/health"))
+        .timeout(Duration::from_secs(5))
+        .send()
+        .await
+        .map_err(|e| format!("RAG service unreachable: {e}"))?;
+    let status = resp.status();
+    let body: Value = resp
+        .json()
+        .await
+        .map_err(|e| format!("RAG health returned invalid JSON: {e}"))?;
+    if !status.is_success() {
+        return Err(format!("RAG health returned HTTP {status}"));
+    }
+    Ok(body)
+}
+
+/// `POST /rebuild`: drops the collection and re-embeds every chunk. Awaited, not
+/// spawned - the admin needs the real result. The 180s timeout covers embedding
+/// the whole corpus through Workers AI; a client-side timeout here would leave the
+/// caller thinking it failed while the rebuild is still running.
+pub async fn rebuild(
+    client: &reqwest::Client,
+    rag_url: &str,
+    rebuild_secret: &str,
+) -> Result<Value, String> {
+    let resp = client
+        .post(format!("{rag_url}/rebuild"))
+        .json(&json!({ "secret": rebuild_secret }))
+        .timeout(Duration::from_secs(180))
+        .send()
+        .await
+        .map_err(|e| format!("RAG service unreachable: {e}"))?;
+
+    let status = resp.status();
+    let body: Value = resp.json().await.unwrap_or(Value::Null);
+    if status.is_success() {
+        return Ok(body);
+    }
+    // FastAPI puts the reason in `detail`; surface it instead of a bare status.
+    let detail = body
+        .get("detail")
+        .and_then(|d| d.as_str())
+        .unwrap_or("no detail returned");
+    Err(format!("RAG rebuild failed (HTTP {status}): {detail}"))
+}
+
 fn project_doc(project: &Value) -> Value {
     let tags = project["tags"]
         .as_array()
@@ -136,6 +186,9 @@ fn certificate_doc(cert: &Value) -> Value {
     })
 }
 
+/// Must stay byte-identical in shape to `_project_chunk` in the RAG service's
+/// data_loader.py: that path rebuilds the same chunk on startup, so a mismatch
+/// means a project's text silently changes depending on which side wrote it last.
 fn format_project(p: &Value) -> String {
     let tags = p["tags"]
         .as_array()
@@ -159,10 +212,10 @@ fn format_project(p: &Value) -> String {
         })
         .unwrap_or_default();
     format!(
-        "Project by Adit-san: {}. Description: {}. Tags/Tech stack: {}.{}",
+        "Project by Adit-san: {}. Description: {}.{}{}",
         p["title"].as_str().unwrap_or(""),
         p["description"].as_str().unwrap_or(""),
-        tags,
+        if tags.is_empty() { String::new() } else { format!(" Tech stack: {tags}.") },
         if links.is_empty() { String::new() } else { format!(" Links: {links}") }
     )
 }

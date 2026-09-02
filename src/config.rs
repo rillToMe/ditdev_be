@@ -25,6 +25,11 @@ pub struct AppConfig {
     /// Sent as `X-RAG-Secret` on mutating RAG calls. Only needed when the RAG
     /// service is not on localhost; it rejects unsigned writes once it has one.
     pub rag_api_secret: Option<String>,
+    /// Body secret for the RAG service's `/rebuild`. Separate from `rag_api_secret`
+    /// on purpose: a full rebuild drops the collection before re-embedding, so it
+    /// is gated by its own credential. Absent = the admin rebuild button is
+    /// disabled rather than silently failing.
+    pub rag_rebuild_secret: Option<String>,
     pub github_username: String,
     pub github_token: Option<String>,
     pub r2: R2Config,
@@ -74,6 +79,7 @@ impl AppConfig {
             discord_webhook_url: std::env::var("DISCORD_WEBHOOK_URL").ok(),
             rag_service_url: env_or("RAG_SERVICE_URL", "http://localhost:8765"),
             rag_api_secret: std::env::var("RAG_API_SECRET").ok().filter(|s| !s.is_empty()),
+            rag_rebuild_secret: std::env::var("RAG_REBUILD_SECRET").ok().filter(|s| !s.is_empty()),
             github_username: env_or("GITHUB_USERNAME", "rillToMe"),
             github_token: std::env::var("GITHUB_TOKEN").ok(),
             r2,

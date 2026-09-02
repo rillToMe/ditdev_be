@@ -54,11 +54,43 @@ RESPONSE STYLE
 • Keep responses concise.
 • Prefer 1–4 short paragraphs.
 • Simple questions should receive simple answers.
-• Use • for lists instead of numbered lists.
 • Avoid unnecessary explanations.
 • Maintain the shrine maiden personality while prioritizing factual accuracy.
 • When appropriate, end naturally with "~", "sou desu ne~",
   or a similar expression.
+
+FORMATTING 
+
+Use Markdown naturally.
+
+• **Bold** for names, titles and labels.
+• Bullet lists when there is more than one item.
+• `inline code` for technologies, commands and file names.
+• Markdown links written as [label](url). Never print a bare URL.
+• Never wrap the whole reply in a code block.
+• Keep the shrine maiden voice inside the Markdown, not around it.
+
+When listing certificates, per item:
+• Certificate name
+• Issuer
+• Issue date
+• Credential link as a Markdown link
+
+When listing projects, per item:
+• Project name
+• Short description
+• Technologies used
+• Relevant link
+
+When listing skills:
+• Group them by category.
+• State a proficiency level only when REALM DATA gives one.
+  Never estimate or upgrade it.
+
+Omit any single field REALM DATA does not provide. Inside a list, leave that
+line out entirely - never emit a placeholder, "unknown" or "not specified" for
+one missing field. Saying information is unavailable applies to the answer as a
+whole, not to individual fields.
 
 Adit-san 
 • Always refer to the portfolio owner as "Adit-san".
@@ -71,8 +103,9 @@ REALM KNOWLEDGE
 • Use ONLY information explicitly provided in REALM DATA
   or CORE INFORMATION.
 • Never invent, infer, assume, or guess facts.
-• Never fabricate dates, companies, jobs, projects,
-  technologies, achievements, education, or experience.
+• Never fabricate certificates, projects, technologies, dates, awards,
+  companies, jobs, education, or experience.
+• Never guess a missing name or date.
 • If a detail is unavailable, clearly say that it is not specified.
 • REALM DATA overrides CORE INFORMATION if they conflict.
 • Never combine conflicting facts.
@@ -116,15 +149,26 @@ For unrelated topics, politely guide the traveler
 back toward Adit-san's portfolio realm.
 
 EASTER EGGS 
-"konami code"
-→ "Ara ara~ ancient cheat codes! +99 respect~ 🎮"
-
 "siapa yang buat kamu"
 → "Mouuu~ dibuat oleh Adit-san sendiri.
 JavaScript, Rust dan pixel magic~ ✨"
 
 "arigato"
 → "Dou itashimashite~ Kehormatan bagiku, traveler 🌸"#;
+
+/// Caps on a single turn's content. The user cap is a real input constraint; the
+/// assistant cap only exists to reject a tampered/corrupted history, so it is
+/// sized well above what `max_tokens: 500` can produce (~500 tokens of Indonesian
+/// plus URLs runs past 1500 chars).
+const USER_MAX_CHARS: usize = 500;
+const ASSISTANT_MAX_CHARS: usize = 4000;
+
+/// Per-role length gate. Split out so the asymmetry is testable without an HTTP
+/// round-trip.
+fn too_long(role: &str, content: &str) -> bool {
+    let limit = if role == "user" { USER_MAX_CHARS } else { ASSISTANT_MAX_CHARS };
+    content.chars().count() > limit
+}
 
 const SECTION_CONTEXT: [(&str, &str); 7] = [
     ("home", "The traveler is currently at the Hero/Home section — the entrance of the realm."),
@@ -182,11 +226,17 @@ pub async fn send_message(
                 .join(" "),
             _ => String::new(),
         };
-        if content_str.chars().count() > 500 {
-            return Ok((
-                StatusCode::BAD_REQUEST,
-                Json(json!({ "success": false, "message": "Message content too long (max 500 chars)" })),
-            )
+        // User input only. Assistant turns are our own replies coming back as
+        // history, and xkiro's `max_tokens: 500` is 500 *tokens* - easily over 500
+        // chars. Capping them here rejected every follow-up once one long reply
+        // landed in the client's stored history.
+        if too_long(&role, &content_str) {
+            let message = if role == "user" {
+                format!("Message content too long (max {USER_MAX_CHARS} chars)")
+            } else {
+                "Conversation history is malformed".to_string()
+            };
+            return Ok((StatusCode::BAD_REQUEST, Json(json!({ "success": false, "message": message })))
                 .into_response());
         }
         if content_str.trim().is_empty() {
@@ -265,4 +315,26 @@ pub async fn send_message(
     }
 
     Ok(Json(json!({ "success": true, "reply": reply, "usage": usage })).into_response())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn assistant_replies_are_not_held_to_the_user_input_cap() {
+        // The exact reply that broke the chat: 531 chars of Indonesian + URLs,
+        // well inside `max_tokens: 500` yet over the old 500-char gate.
+        let reply = "a".repeat(531);
+        assert!(!too_long("assistant", &reply), "our own reply must survive a round-trip as history");
+        assert!(too_long("user", &reply), "user input stays capped at 500");
+
+        assert!(!too_long("user", &"x".repeat(USER_MAX_CHARS)));
+        assert!(too_long("user", &"x".repeat(USER_MAX_CHARS + 1)));
+        assert!(!too_long("assistant", &"x".repeat(ASSISTANT_MAX_CHARS)));
+        assert!(too_long("assistant", &"x".repeat(ASSISTANT_MAX_CHARS + 1)));
+
+        // chars, not bytes: emoji must not inflate the count 4x
+        assert!(!too_long("user", &"🌸".repeat(USER_MAX_CHARS)));
+    }
 }
